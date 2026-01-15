@@ -1,9 +1,9 @@
-#include "contactbook.h"
+#include <QApplication>
+#include "mainwindow.h"
 
-int main() {
-
-    Contactbook phonebook;
-    phonebook.main_menu();
-
-    return 0;
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+    MainWindow window;
+    window.show();
+    return app.exec();
 }

@@ -1,51 +1,45 @@
 #pragma once
 #include "contacts.h"
+#include <QObject>
+#include <QList>
+#include <QString>
 
-class Contactbook {
-
-    list<Contact> contactbook;
-    string filename;
+class Contactbook : public QObject {
+    Q_OBJECT
 
 public:
-    Contactbook(list<Contact> contactbook = {});
-    Contactbook(const Contactbook& c);
+    Contactbook(QObject* parent = nullptr);
     ~Contactbook();
 
-    void show_contacts();
-    void delete_contact();
-    void edit_contact();
     bool add_contact(const Contact& contact);
+    bool remove_contact(int index);
+    bool update_contact(int index, const Contact& contact);
+    Contact get_contact(int index) const;
+    QList<Contact> get_all_contacts() const { return m_contacts; }
+    int contact_count() const { return m_contacts.size(); }
+
+    QList<Contact> search_by_firstname(const QList<Contact>& contacts, const QString& criteria) const;
+    QList<Contact> search_by_surname(const QList<Contact>& contacts, const QString& criteria) const;
+    QList<Contact> search_by_middlename(const QList<Contact>& contacts, const QString& criteria) const;
+    QList<Contact> search_by_email(const QList<Contact>& contacts, const QString& criteria) const;
+    QList<Contact> search_by_phone(const QList<Contact>& contacts, const QString& criteria) const;
+    QList<Contact> search_by_address(const QList<Contact>& contacts, const QString& criteria) const;
+    QList<Contact> search_by_birthday(const QList<Contact>& contacts, const QString& criteria) const;
 
     void sort_by_firstname();
     void sort_by_surname();
     void sort_by_middlename();
-    void sort_by_address();
     void sort_by_email();
     void sort_by_birthday();
+    void sort_by_address();
     void sort_by_phones();
 
-    void sort_phones_in_contacts();
+    bool load_from_file(const QString& filename = "contacts.txt");
+    bool save_to_file(const QString& filename = "contacts.txt");
 
-    bool load_from_file(const string& filename = "contacts.txt");
-    bool save_to_file(const string& filename = "contacts.txt");
+signals:
+    void contacts_changed();
 
-    Contact new_contact();
-
-    list <Contact*> search_by_firstname(list <Contact>& contacts, const string& criteria);
-    list <Contact*> search_by_surname(list <Contact>& contacts, const string& criteria);
-    list <Contact*> search_by_middlename(list <Contact>& contacts, const string& criteria);
-    list <Contact*> search_by_address(list <Contact>& contacts, const string& criteria);
-    list <Contact*> search_by_birthday(list <Contact>& contacts, const string& criteria);
-    list <Contact*> search_by_email(list <Contact>& contacts, const string& criteria);
-    list <Contact*> search_by_phone(list <Contact>& contacts, const string& criteria);
-
-
-    int main_menu();
-
-    void menu_search();
-    void menu_sort();
-    void menu_edit(Contact& contact, int index);
-
-    bool is_email_unique(const string& email) const;
-
+private:
+    QList<Contact> m_contacts;
 };
