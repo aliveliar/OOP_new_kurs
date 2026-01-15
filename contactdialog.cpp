@@ -98,7 +98,7 @@ Contact ContactDialog::get_contact() const {
     return contact;
 }
 
-// Добавление телефонного номера с валидацией формата
+// Добавление телефонного номера в список с валидацией
 void ContactDialog::on_add_phone() {
     QString phone = m_phone_edit->text().trimmed();
     if (!phone.isEmpty()) {

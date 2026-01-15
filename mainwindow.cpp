@@ -12,7 +12,10 @@
 #include <QFormLayout>
 #include <QScrollArea>
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), m_contactbook(new Contactbook(this)) {
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent),
+    m_contactbook(new Contactbook(this)),
+    m_database(new Database(this))
+{
     setup_UI();
     create_menu();
     refresh_table();
@@ -96,6 +99,11 @@ void MainWindow::setup_UI() {
     central->setLayout(mainLayout);
     setCentralWidget(central);
 
+    QPushButton* saveDbButton = new QPushButton("Save to DB");
+    QPushButton* loadDbButton = new QPushButton("Load from DB");
+    buttonLayout->addWidget(saveDbButton);
+    buttonLayout->addWidget(loadDbButton);
+
     connect(m_add_button, &QPushButton::clicked, this, &MainWindow::on_add_contact);
     connect(m_edit_button, &QPushButton::clicked, this, &MainWindow::on_edit_contact);
     connect(m_delete_button, &QPushButton::clicked, this, &MainWindow::on_delete_contact);
@@ -104,6 +112,8 @@ void MainWindow::setup_UI() {
     connect(m_sort_button, &QPushButton::clicked, this, &MainWindow::on_sort);
     connect(m_save_button, &QPushButton::clicked, this, &MainWindow::on_save);
     connect(m_load_button, &QPushButton::clicked, this, &MainWindow::on_load);
+    connect(saveDbButton, &QPushButton::clicked, this, &MainWindow::on_save_to_database);
+    connect(loadDbButton, &QPushButton::clicked, this, &MainWindow::on_load_from_database);
 }
 
 // Создание меню приложения
@@ -124,7 +134,7 @@ void MainWindow::create_menu() {
     viewMenu->addAction("Refresh", this, &MainWindow::refresh_table);
 }
 
-// Обновление таблицы контактов в главном окне
+// Обновление таблицы контактов
 void MainWindow::refresh_table() {
     m_table->setRowCount(0);
     QList<Contact> contacts = m_contactbook->get_all_contacts();
@@ -163,6 +173,16 @@ void MainWindow::on_add_contact() {
             return;
         }
 
+        if (!contact.valid_email(contact.get_email())) {
+            QMessageBox::warning(this, "Error", "Email must contain your first name!");
+            return;
+        }
+
+        if (!m_contactbook->is_email_unique(contact.get_email())) {
+            QMessageBox::warning(this, "Error", "This email already exists in the phone book!");
+            return;
+        }
+
         if (m_contactbook->add_contact(contact)) {
             QMessageBox::information(this, "Success", "Contact added successfully!");
         } else {
@@ -191,10 +211,19 @@ void MainWindow::on_edit_contact() {
             return;
         }
 
-        if (m_contactbook->update_contact(row, newContact)) {
-            QMessageBox::information(this, "Success", "Contact updated successfully!");
+        if (!newContact.valid_email(newContact.get_email())) {
+            QMessageBox::warning(this, "Error", "Email must contain your first name!");
+            return;
+        }
+
+        if (!m_contactbook->update_contact(row, newContact)) {
+            if (!m_contactbook->is_email_unique(newContact.get_email(), row)) {
+                QMessageBox::warning(this, "Error", "This email already exists in the phone book!");
+            } else {
+                show_contact_error(newContact, true);
+            }
         } else {
-            show_contact_error(newContact, true);
+            QMessageBox::information(this, "Success", "Contact updated successfully!");
         }
     }
 }
@@ -221,7 +250,7 @@ void MainWindow::show_contact_error(const Contact& contact, bool isEditing) {
     if (contact.get_email().isEmpty()) {
         errorMsg += "- Email is required\n";
     } else if (!contact.valid_email(contact.get_email())) {
-        errorMsg += "- Invalid email format\n";
+        errorMsg += "- Invalid email format or email doesn't contain your first name\n";
     }
 
     if (contact.get_phones().isEmpty()) {
@@ -242,7 +271,7 @@ void MainWindow::show_contact_error(const Contact& contact, bool isEditing) {
     QMessageBox::warning(this, "Error", errorMsg);
 }
 
-// Удаление выбранного контакта из таблицы
+// Удаление выбранного контакта
 void MainWindow::on_delete_contact() {
     int row = m_table->currentRow();
     if (row < 0) {
@@ -256,7 +285,7 @@ void MainWindow::on_delete_contact() {
     }
 }
 
-// Поиск контактов по различным критериям с фильтрацией
+// Поиск контактов по различным критериям
 void MainWindow::on_search() {
     QList<Contact> results = m_contactbook->get_all_contacts();
 
@@ -362,5 +391,62 @@ void MainWindow::on_load() {
         } else {
             QMessageBox::warning(this, "Error", "Failed to load contacts!");
         }
+    }
+}
+
+// Сохранение контактов в базу данных PostgreSQL
+void MainWindow::on_save_to_database()
+{
+    if (!m_database->connect_to_database()) {
+        QMessageBox::warning(this, "Error",
+                             "Failed to connect to PostgreSQL. Check:\n"
+                             "1. Is PostgreSQL server running\n"
+                             "2. Connection settings\n"
+                             "3. Does database 'pgs' exist");
+        return;
+    }
+
+    QList<Contact> contacts = m_contactbook->get_all_contacts();
+    if (m_database->save_contacts(contacts)) {
+        QMessageBox::information(this, "Success",
+                                 QString("Saved %1 contacts to database").arg(contacts.size()));
+    } else {
+        QMessageBox::warning(this, "Error", "Failed to save contacts to database");
+    }
+}
+
+// Загрузка контактов из базы данных PostgreSQL
+void MainWindow::on_load_from_database()
+{
+    if (!m_database->connect_to_database()) {
+        QMessageBox::warning(this, "Error", "Failed to connect to PostgreSQL");
+        return;
+    }
+
+    QList<Contact> contacts = m_database->load_contacts();
+
+    if (!contacts.isEmpty()) {
+        while (m_contactbook->contact_count() > 0) {
+            m_contactbook->remove_contact(0);
+        }
+
+        int addedCount = 0;
+        for (const Contact& contact : contacts) {
+            if (m_contactbook->add_contact(contact)) {
+                addedCount++;
+            }
+        }
+
+        refresh_table();
+
+        QMessageBox::information(this, "Success",
+                                 QString("Loaded %1 contacts from database").arg(addedCount));
+
+        qDebug() << "Contacts loaded:" << addedCount;
+        qDebug() << "Now in Contactbook:" << m_contactbook->contact_count() << "contacts";
+
+    } else {
+        QMessageBox::information(this, "Information",
+                                 "No contacts in database or table is empty");
     }
 }
