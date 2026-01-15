@@ -130,7 +130,7 @@ bool Contact::contains_firstname_in_email(const string& email, const string& fir
 
 bool Contact::valid_email(string &email) {
     spaces_email(email);
-    regex pattern("^[a-zA-Z0-9]+@[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
+    regex pattern("^[a-zA-Z0-9\\-\\]+@[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
     if (!regex_match(trim(email), pattern)) {
         return false;
     }
@@ -319,4 +319,5 @@ bool Contact::remove_phone(int index) {
     advance(it, index);
     lst_phones.erase(it);
     return true;
+
 }
