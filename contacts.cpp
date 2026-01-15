@@ -187,7 +187,7 @@ bool Contact::contains_firstname_in_email(const QString& email) const {
 }
 
 bool Contact::valid_email(const QString& email) const {
-    QRegularExpression regex("^[a-zA-Z0-9]+@[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
+    QRegularExpression regex("^[a-zA-Z0-9\\-\\]+@[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
     if (!regex.match(trim(email)).hasMatch()) {
         return false;
     }
@@ -264,3 +264,4 @@ QString Contact::to_string() const {
     return QString("%1 %2 %3 | Email: %4 | Phones: %5")
     .arg(m_surname, m_firstname, m_middlename, m_email, m_phones.join(", "));
 }
+
