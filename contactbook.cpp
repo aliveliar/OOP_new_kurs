@@ -1,15 +1,25 @@
 #include "contactbook.h"
 #include <QFile>
-#include <QTextStream>
 #include <QDebug>
+#include <QTextStream>
 #include <algorithm>
 
 Contactbook::Contactbook(QObject* parent) : QObject(parent) {}
 
 Contactbook::~Contactbook() {}
 
+bool Contactbook::is_email_unique(const QString& email, int excludeIndex) const {
+    for (int i = 0; i < m_contacts.size(); ++i) {
+        if (excludeIndex != -1 && i == excludeIndex) continue;
+        if (m_contacts[i].get_email() == email) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool Contactbook::add_contact(const Contact& contact) {
-    if (contact.is_valid()) {
+    if (contact.is_valid() && is_email_unique(contact.get_email())) {
         m_contacts.append(contact);
         emit contacts_changed();
         return true;
@@ -28,6 +38,9 @@ bool Contactbook::remove_contact(int index) {
 
 bool Contactbook::update_contact(int index, const Contact& contact) {
     if (index >= 0 && index < m_contacts.size() && contact.is_valid_for_edit()) {
+        if (!is_email_unique(contact.get_email(), index)) {
+            return false;
+        }
         m_contacts[index] = contact;
         emit contacts_changed();
         return true;
@@ -166,7 +179,7 @@ void Contactbook::sort_by_phones() {
     emit contacts_changed();
 }
 
-// Загрузка контактов из текстового файла с пользовательским форматом
+// Загрузка контактов из файла в формате текстового файла
 bool Contactbook::load_from_file(const QString& filename) {
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -205,7 +218,7 @@ bool Contactbook::load_from_file(const QString& filename) {
     return true;
 }
 
-// Сохранение контактов в текстовый файл с пользовательским форматом
+// Сохранение контактов в файл в формате текстового файла
 bool Contactbook::save_to_file(const QString& filename) {
     QFile file(filename);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {

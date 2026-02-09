@@ -2,7 +2,6 @@
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
 #include <QDate>
-#include <QDebug>
 
 Contact::Contact(QString firstname, QString surname, QString email, QStringList phones, QString middlename, QString address, QString birthday)
     : m_firstname(firstname), m_surname(surname), m_middlename(middlename), m_address(address), m_birthday(birthday), m_email(email), m_phones(phones) {}
@@ -167,26 +166,40 @@ QString Contact::validate_for_edit() const {
     return errors.join("\n");
 }
 
-// Проверка формата имени с поддержкой кириллицы
 bool Contact::valid_name(const QString& name) const {
     if (name.isEmpty()) return false;
-    QRegularExpression regex("^[a-zA-Z][a-zA-Z0-9\\-\\s]*[a-zA-Z0-9]$");
+    QRegularExpression regex("^[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9]$");
     return regex.match(trim(name)).hasMatch();
 }
 
-// Проверка формата email с использованием регулярного выражения
-bool Contact::valid_email(const QString& email) const {
-    QRegularExpression regex("^[a-zA-Z0-9\\-\\]+@[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
-    return regex.match(trim(email)).hasMatch();
+bool Contact::contains_firstname_in_email(const QString& email) const {
+    if (m_firstname.isEmpty() || email.isEmpty()) return false;
+
+    QString firstnameLower = m_firstname.toLower();
+    QString emailLower = email.toLower();
+
+    int atPos = emailLower.indexOf('@');
+    if (atPos == -1) return false;
+
+    QString localPart = emailLower.left(atPos);
+
+    return localPart.contains(firstnameLower);
 }
 
-// Проверка формата телефонного номера российского стандарта
+bool Contact::valid_email(const QString& email) const {
+    QRegularExpression regex("^[a-zA-Z0-9\\-\\]+@[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$");
+    if (!regex.match(trim(email)).hasMatch()) {
+        return false;
+    }
+
+    return contains_firstname_in_email(email);
+}
+
 bool Contact::valid_phone(const QString& phone) const {
     QRegularExpression regex("^(\\+7|8)[\\s(]*(\\d{3})[\\s)]*(\\d{3})[\\s-]*(\\d{2})[\\s-]*(\\d{2})$");
     return regex.match(trim(phone)).hasMatch();
 }
 
-// Проверка формата даты рождения и её корректности
 bool Contact::valid_birthday(const QString& birthday, bool allowEmpty) const {
     QString trimmed = trim(birthday);
     if (trimmed.isEmpty()) return allowEmpty;
@@ -207,7 +220,6 @@ bool Contact::valid_birthday(const QString& birthday, bool allowEmpty) const {
     return date <= QDate::currentDate();
 }
 
-// Нормализация телефонного номера к стандартному формату
 QString Contact::normalize_phone(const QString& phone) const {
     QString normalized;
     for (QChar ch : phone) {
@@ -230,7 +242,6 @@ QString Contact::trim(const QString& str) const {
     return str.trimmed();
 }
 
-// Удаление пробелов из email адреса
 void Contact::spaces_email(QString& email) const {
     QString trimmed_email;
     for (const auto& element : email) {
@@ -249,7 +260,8 @@ QString Contact::get_smallest_phone() const {
     return sorted.first();
 }
 
-QString Contact::toString() const {
+QString Contact::to_string() const {
     return QString("%1 %2 %3 | Email: %4 | Phones: %5")
     .arg(m_surname, m_firstname, m_middlename, m_email, m_phones.join(", "));
 }
+

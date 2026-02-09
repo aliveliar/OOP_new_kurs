@@ -39,12 +39,13 @@ public:
     bool valid_email(const QString& email) const;
     bool valid_phone(const QString& phone) const;
     bool valid_birthday(const QString& birthday, bool allowEmpty = true) const;
+    bool contains_firstname_in_email(const QString& email) const;
 
     QString normalize_phone(const QString& phone) const;
     QString trim(const QString& str) const;
 
     QString get_smallest_phone() const;
-    QString toString() const;
+    QString to_string() const;
 
     void spaces_email(QString& email) const;
 

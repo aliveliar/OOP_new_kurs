@@ -37,6 +37,8 @@ public:
     bool load_from_file(const QString& filename = "contacts.txt");
     bool save_to_file(const QString& filename = "contacts.txt");
 
+    bool is_email_unique(const QString& email, int excludeIndex = -1) const;
+
 signals:
     void contacts_changed();
 

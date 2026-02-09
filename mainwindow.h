@@ -10,10 +10,10 @@
 #include <QGroupBox>
 #include <QCheckBox>
 #include "contactbook.h"
+#include "database.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
-
 public:
     MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
@@ -28,6 +28,8 @@ private slots:
     void on_save();
     void on_load();
     void refresh_table();
+    void on_save_to_database();
+    void on_load_from_database();
 
 private:
     void setup_UI();
@@ -35,6 +37,7 @@ private:
     void show_contact_error(const Contact& contact, bool isEditing = false);
 
     Contactbook* m_contactbook;
+    Database* m_database;
     QTableWidget* m_table;
 
     QLineEdit* m_search_firstname;
